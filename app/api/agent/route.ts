@@ -73,13 +73,31 @@ async function anonymousChat(req: NextRequest) {
     }
 
     const the_model = getModel(modelProvider, modelType, modelApiKey.trim(), modelCustomBaseUrl);
-    const model = the_model(modelType);
+    const model = modelProvider === "custom"
+        ? the_model.chat(modelType)
+        : the_model(modelType);
+
+    // 自部署提供商不支持 developer 角色，将 system prompt 作为 user 消息插入
+    const isCustomProvider = modelProvider === "custom";
+    const convertedMessages = convertToModelMessages(messages).map((m: any) =>
+        m.role === "developer" ? { ...m, role: "user" } : m
+    );
 
     try {
         const result = streamText({
             model,
-            system: modelParams.modelPrompt,
-            messages: convertToModelMessages(messages), // 匿名用户没有历史消息
+            ...(isCustomProvider
+                ? {
+                    messages: [
+                        { role: "user" as const, content: modelParams.modelPrompt },
+                        ...convertedMessages,
+                    ],
+                }
+                : {
+                    system: modelParams.modelPrompt,
+                    messages: convertedMessages,
+                }
+            ),
             temperature: 0.6,
             stopWhen: stepCountIs(20),
             toolChoice: "auto",
