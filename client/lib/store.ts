@@ -33,11 +33,14 @@ const DEFAULT_CONFIG: AppConfigSettings = {
   model: {
     provider: "deepseek",
     modelType: "deepseek-chat",
+    customModelName: "",
+    customBaseUrl: "",
   },
   apiKeys: {
     openai: "",
     deepseek: "",
     gemini: "",
+    custom: "",
   },
   prompt: "",
   language: "zh-CN",

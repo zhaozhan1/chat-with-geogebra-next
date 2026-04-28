@@ -14,6 +14,7 @@ interface AnonymousChatRequestData {
         modelType: string;
         modelApiKey: string;
         modelPrompt: string;
+        modelCustomBaseUrl?: string;
     };
 }
 
@@ -22,14 +23,14 @@ interface AuthorizedChatRequestData {
     messages: UIMessage[];
 }
 
-const avaliableModelProviders = ["deepseek", "openai", "gemini"];
+const avaliableModelProviders = ["deepseek", "openai", "gemini", "custom"];
 
 // 处理匿名用户的对话
 async function anonymousChat(req: NextRequest) {
     logger.api("匿名用户请求agent对话");
     // 先提取参数
     const { conversationId, messages, modelParams }: AnonymousChatRequestData = await req.json();
-    const { modelProvider, modelType, modelApiKey, modelPrompt } = modelParams;
+    const { modelProvider, modelType, modelApiKey, modelPrompt, modelCustomBaseUrl } = modelParams;
 
     // 参数校验
     if (!conversationId || conversationId.trim() === "") {
@@ -53,9 +54,16 @@ async function anonymousChat(req: NextRequest) {
         );
     }
 
-    if (!modelApiKey || modelApiKey.trim() === "") {
+    if (modelProvider !== "custom" && (!modelApiKey || modelApiKey.trim() === "")) {
         return NextResponse.json(
             { success: false, error: "Missing model API key" },
+            { status: 400 }
+        );
+    }
+
+    if (modelProvider === "custom" && (!modelCustomBaseUrl || modelCustomBaseUrl.trim() === "")) {
+        return NextResponse.json(
+            { success: false, error: "缺少自定义模型 URL" },
             { status: 400 }
         );
     }
@@ -64,7 +72,7 @@ async function anonymousChat(req: NextRequest) {
         modelParams.modelPrompt = AGENT_SYSTEM_PROMPT;
     }
 
-    const the_model = getModel(modelProvider, modelType, modelApiKey.trim());
+    const the_model = getModel(modelProvider, modelType, modelApiKey.trim(), modelCustomBaseUrl);
     const model = the_model(modelType);
 
     try {

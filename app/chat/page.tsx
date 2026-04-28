@@ -248,8 +248,13 @@ export default function ChatPage() {
                   .provider as keyof typeof configSettings.apiKeys
               ] || "",
             modelProvider: configSettings.model.provider,
-            modelType: configSettings.model.modelType,
+            modelType: configSettings.model.provider === "custom"
+              ? configSettings.model.customModelName || ""
+              : configSettings.model.modelType,
             modelPrompt: configSettings.prompt,
+            modelCustomBaseUrl: configSettings.model.provider === "custom"
+              ? configSettings.model.customBaseUrl || ""
+              : undefined,
           },
         },
         headers: {
