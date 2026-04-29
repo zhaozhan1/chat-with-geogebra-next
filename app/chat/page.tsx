@@ -56,8 +56,8 @@ export default function ChatPage() {
     preview: string;
   } | null>(null);
 
-  const currentModelType = config.model.modelType;
-  const supportsImage = isModelSupportsImage(currentModelType);
+  const supportsImage = config.model.provider === "custom"
+    || isModelSupportsImage(config.model.modelType);
 
   // 初始化store
   useEffect(() => {
