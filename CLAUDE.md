@@ -67,3 +67,9 @@ shadcn/ui 位于 `client/components/ui/`。工具调用 UI 渲染器位于 `clie
 - 开发文档：`docs/development/`（todo/doing/done）
 - Debug 文档：`docs/debug/`（todo/doing/done）
 - 命名规则：`YYYY-MM-DD-<topic>.md`
+
+## 流程执行检查点
+
+1. **分支检查** — 编码前确认：当前在 `master` → `master` 包含所有已合并功能 → 新分支 `feature/<topic>` 名称正确
+2. **文档路径** — 所有文档必须放置于 `docs/` 目录规范内，不使用 skill 默认路径
+3. **文档流转** — 计划文档严格执行 `todo/ → doing/ → done/` 文件移动
