@@ -15,6 +15,7 @@ import { FloatingChatPanel } from "@/client/components/floating-chat-panel"
 import dynamic from "next/dynamic"
 import { uploadOneMessageToCollection } from "@/client/lib/collection";
 import { getRandomId } from "@/client/lib/utils"
+import { isModelSupportsImage } from "@/server/core/config/providers";
 
 const ConfigDialog = dynamic(() => import("@/client/components/config-dialog").then(mod => mod.ConfigDialog), {
   ssr: false
@@ -50,6 +51,13 @@ export default function ChatPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
+  const [attachment, setAttachment] = useState<{
+    file: File;
+    preview: string;
+  } | null>(null);
+
+  const currentModelType = config.model.modelType;
+  const supportsImage = isModelSupportsImage(currentModelType);
 
   // 初始化store
   useEffect(() => {
@@ -219,7 +227,7 @@ export default function ChatPage() {
 
   const handleChatSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!input.trim() || isLoading) return
+    if ((!input.trim() && !attachment) || isLoading) return
 
     const configSettings = chatConfig.configSettings
 
@@ -229,7 +237,12 @@ export default function ChatPage() {
     const userMessage = {
       id: `${getRandomId()}`,  // 16位随机字母ID
       role: "user" as "user",
-      parts: [{ type: "text" as const, text: input }],
+      parts: [
+        ...(input.trim() ? [{ type: "text" as const, text: input }] : []),
+        ...(attachment
+          ? [{ type: "file" as const, mediaType: attachment.file.type, url: attachment.preview, filename: attachment.file.name }]
+          : []),
+      ],
     }
     useAppStore.getState().addMessage(activeConversationId, userMessage);
 
@@ -281,6 +294,7 @@ export default function ChatPage() {
       );
       lastInput.current = input
       setInput("")
+      setAttachment(null);
     } catch (err) {
       handleError(err)
     }
@@ -373,6 +387,9 @@ export default function ChatPage() {
           onRefreshCanvas={handleRefreshCanvas}
           onExecuteCommands={handleExecuteCommands}
           error={error}
+          attachment={attachment}
+          onAttachmentChange={setAttachment}
+          supportsImage={supportsImage}
         />
 
         {saveSuccess && (
