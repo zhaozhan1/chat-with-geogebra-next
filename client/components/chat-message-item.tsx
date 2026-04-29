@@ -95,6 +95,28 @@ export const ChatMessageItem = memo(function ChatMessageItem({
           >
             <div className="prose prose-sm max-w-none wrap-break-word">
               {message.parts.map((part: any, index: number) => {
+                if (part.type === "file" && part.mediaType?.startsWith("image/")) {
+                  return (
+                    <div key={index} className="my-2">
+                      <img
+                        src={part.url}
+                        alt="用户上传的图片"
+                        className="max-w-[280px] rounded-lg border border-border"
+                      />
+                    </div>
+                  );
+                }
+                if (part.type === "file" && part.mediaType === "application/pdf") {
+                  return (
+                    <div key={index} className="my-2 flex items-center gap-2 rounded-lg border border-border p-3 max-w-[280px]">
+                      <svg className="h-6 w-6 text-muted-foreground shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                      </svg>
+                      <span className="text-sm text-muted-foreground truncate">{part.filename || "PDF 文件"}</span>
+                    </div>
+                  );
+                }
                 if (part.type === "text") {
                   return (
                     <Streamdown
