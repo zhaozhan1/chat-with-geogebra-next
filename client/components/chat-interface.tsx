@@ -5,10 +5,11 @@ import { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardFooter } from "@/client/components/ui/card"
 import { Input } from "@/client/components/ui/input"
 import { Button } from "@/client/components/ui/button"
-import { Send, AlertCircle, StopCircleIcon } from "lucide-react"
+import { Send, AlertCircle, StopCircleIcon, Terminal } from "lucide-react"
 import { Alert, AlertDescription } from "@/client/components/ui/alert"
 import { useGeoGebraCommands } from "@/client/hooks/use-geogebra-commands"
 import { ChatMessageItem } from "@/client/components/chat-message-item"
+import { CommandDialog } from "@/client/components/command-dialog"
 
 interface ChatInterfaceProps {
   messages: any
@@ -19,6 +20,7 @@ interface ChatInterfaceProps {
   isThinking: boolean
   isLoading: boolean
   onOpenConfig?: () => void
+  onExecuteCommands?: (commands: string[]) => Promise<void>
   error?: string | null
 }
 
@@ -30,10 +32,12 @@ export function ChatInterface({
   handleStop,
   isThinking,
   isLoading,
+  onExecuteCommands,
   error,
 }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({});
+  const [commandDialogOpen, setCommandDialogOpen] = useState(false);
   const { extractAllMessagesCommands } = useGeoGebraCommands();
 
   // 自动滚动到底部
@@ -135,11 +139,31 @@ export function ChatInterface({
               <StopCircleIcon className="h-4 w-4" />
             </Button>
           ) : (
-            <Button type="submit" disabled={!input.trim()}>
-              <Send className="h-4 w-4" />
-            </Button>
+            <>
+              <Button type="submit" disabled={!input.trim()}>
+                <Send className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => setCommandDialogOpen(true)}
+                disabled={isLoading}
+                title="批量命令"
+              >
+                <Terminal className="h-4 w-4" />
+              </Button>
+            </>
           )}
         </form>
+
+        {onExecuteCommands && (
+          <CommandDialog
+            open={commandDialogOpen}
+            onOpenChange={setCommandDialogOpen}
+            onExecute={onExecuteCommands}
+          />
+        )}
       </CardFooter>
     </Card>
   );
