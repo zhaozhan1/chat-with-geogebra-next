@@ -84,8 +84,12 @@ export function ChatInterface({
       setToastMessage(error.message);
       return;
     }
-    const preview = await fileToDataUrl(file);
-    onAttachmentChange({ file, preview });
+    try {
+      const preview = await fileToDataUrl(file);
+      onAttachmentChange({ file, preview });
+    } catch {
+      setToastMessage("文件读取失败");
+    }
   }, [supportsImage, onAttachmentChange]);
 
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,7 +118,10 @@ export function ChatInterface({
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragOver(false);
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (e.clientX <= rect.left || e.clientX >= rect.right || e.clientY <= rect.top || e.clientY >= rect.bottom) {
+      setIsDragOver(false);
+    }
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {

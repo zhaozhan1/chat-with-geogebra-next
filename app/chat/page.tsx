@@ -164,7 +164,7 @@ export default function ChatPage() {
     onFinish: (message: any) => {
       setIsThinking(false);
       if (message.finishReason === "stop") {
-        // 上传最后一条消息到集合
+        setAttachment(null);
         uploadOneMessageToCollection(activeConversationId, message.message);
         useAppStore .getState() .addMessage(activeConversationId, message.message);
       }
@@ -285,8 +285,6 @@ export default function ChatPage() {
       };
     }
 
-    console.log("Sending message with options:", requestOptions);
-
     try {
       sendMessage(
         userMessage,
@@ -294,11 +292,10 @@ export default function ChatPage() {
       );
       lastInput.current = input
       setInput("")
-      setAttachment(null);
     } catch (err) {
       handleError(err)
     }
-  }, [input, isLoading, clearError, sendMessage, chatConfig, handleError])
+  }, [input, isLoading, attachment, clearError, sendMessage, chatConfig, handleError])
 
   const handleCreateConversation = useCallback(() => {
     if (!isLoading) useAppStore.getState().createConversation()

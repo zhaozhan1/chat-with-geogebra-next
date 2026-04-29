@@ -25,6 +25,15 @@ interface AuthorizedChatRequestData {
 
 const avaliableModelProviders = ["deepseek", "openai", "gemini", "custom"];
 
+const ALLOWED_FILE_MEDIA_TYPES = new Set([
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/webp",
+    "application/pdf",
+]);
+const MAX_BASE64_SIZE = 7 * 1024 * 1024; // 5MB 文件 → ~6.7MB base64，留余量
+
 // 处理匿名用户的对话
 async function anonymousChat(req: NextRequest) {
     logger.api("匿名用户请求agent对话");
@@ -79,9 +88,35 @@ async function anonymousChat(req: NextRequest) {
 
     // 自部署提供商不支持 developer 角色，将 system prompt 作为 user 消息插入
     const isCustomProvider = modelProvider === "custom";
-    const convertedMessages = convertToModelMessages(messages).map((m: any) =>
-        m.role === "developer" ? { ...m, role: "user" } : m
-    );
+    const convertedMessages = convertToModelMessages(messages).map((m: any) => {
+        if (m.role === "developer") return { ...m, role: "user" };
+        if (m.role === "user" && Array.isArray(m.content)) {
+            return {
+                ...m,
+                content: m.content.map((part: any) => {
+                    if (part.type === "file") {
+                        // 校验 mediaType
+                        if (!ALLOWED_FILE_MEDIA_TYPES.has(part.mediaType)) {
+                            throw new Error("不支持的文件类型");
+                        }
+                        // 剥离 data URL 前缀并校验大小
+                        if (typeof part.data === "string" && part.data.startsWith("data:")) {
+                            const commaIndex = part.data.indexOf(",");
+                            if (commaIndex !== -1) {
+                                const rawBase64 = part.data.substring(commaIndex + 1);
+                                if (rawBase64.length > MAX_BASE64_SIZE) {
+                                    throw new Error("文件大小超出限制");
+                                }
+                                return { ...part, data: rawBase64 };
+                            }
+                        }
+                    }
+                    return part;
+                }),
+            };
+        }
+        return m;
+    });
 
     try {
         const result = streamText({
@@ -116,5 +151,12 @@ async function anonymousChat(req: NextRequest) {
 
 // Agent 系统提示词
 export async function POST(req: NextRequest) {
+    const contentLength = parseInt(req.headers.get("content-length") || "0", 10);
+    if (contentLength > 10 * 1024 * 1024) {
+        return NextResponse.json(
+            { success: false, error: "请求体过大" },
+            { status: 413 }
+        );
+    }
     return await anonymousChat(req);
 }
