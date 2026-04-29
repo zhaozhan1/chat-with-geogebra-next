@@ -143,16 +143,18 @@ export function ChatInterface({
               <Button type="submit" disabled={!input.trim()}>
                 <Send className="h-4 w-4" />
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => setCommandDialogOpen(true)}
-                disabled={isLoading}
-                title="批量命令"
-              >
-                <Terminal className="h-4 w-4" />
-              </Button>
+              {onExecuteCommands && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCommandDialogOpen(true)}
+                  disabled={isLoading}
+                  title="批量命令"
+                >
+                  <Terminal className="h-4 w-4" />
+                </Button>
+              )}
             </>
           )}
         </form>
