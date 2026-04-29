@@ -112,13 +112,25 @@ export function ConfigDialog({
   }, [config, open]);
 
   const handleSave = () => {
-    // 获取当前选择的模型的提供商
-    const selectedModel = MODEL_OPTIONS.find(
-      (model) => model.value === localConfig.model.modelType
-    );
-    const provider = selectedModel?.provider || selectedProvider || "openai";
+    const provider = selectedProvider === "custom"
+      ? "custom"
+      : (() => {
+          const selectedModel = MODEL_OPTIONS.find(
+            (model) => model.value === localConfig.model.modelType
+          );
+          return selectedModel?.provider || selectedProvider || "openai";
+        })();
 
-    // 更新store中的配置，确保modelProvider字段同步
+    // 验证自定义 URL 格式
+    if (selectedProvider === "custom" && localConfig.model.customBaseUrl) {
+      try {
+        new URL(localConfig.model.customBaseUrl);
+      } catch {
+        setError("模型 URL 格式无效，请输入有效的 HTTP(S) 地址");
+        return;
+      }
+    }
+
     updateConfig({
       ...localConfig,
       model: {
@@ -142,7 +154,8 @@ export function ConfigDialog({
     setError(null);
   };
 
-  const getCurrentProviderKey = () => {
+  const getCurrentProviderKey = (): string => {
+    if (selectedProvider === "custom") return "custom";
     const selectedModel = MODEL_OPTIONS.find(
       (model) => model.value === localConfig.model.modelType
     );
@@ -197,24 +210,30 @@ export function ConfigDialog({
                       value={selectedProvider}
                       onValueChange={(value) => {
                         setSelectedProvider(value);
-                        // 切换供应商时，自动选择第一个模型，并同步modelProvider字段
-                        const firstModel = MODEL_OPTIONS.find(
-                          (model) => model.provider === value
-                        );
-                        if (firstModel) {
+                        if (value === "custom") {
                           setLocalConfig({
                             ...localConfig,
-                            model: {
-                              ...localConfig.model,
-                              modelType: firstModel.value,
-                              provider: value,
-                            },
+                            model: { ...localConfig.model, provider: "custom" },
                           });
                         } else {
-                          setLocalConfig({
-                            ...localConfig,
-                            model: { ...localConfig.model, provider: value },
-                          });
+                          const firstModel = MODEL_OPTIONS.find(
+                            (model) => model.provider === value
+                          );
+                          if (firstModel) {
+                            setLocalConfig({
+                              ...localConfig,
+                              model: {
+                                ...localConfig.model,
+                                modelType: firstModel.value,
+                                provider: value,
+                              },
+                            });
+                          } else {
+                            setLocalConfig({
+                              ...localConfig,
+                              model: { ...localConfig.model, provider: value },
+                            });
+                          }
                         }
                       }}
                     >
@@ -222,12 +241,14 @@ export function ConfigDialog({
                         <SelectValue placeholder="选择供应商" />
                       </SelectTrigger>
                       <SelectContent>
-                        {/* 供应商去重 */}
-                        {[...new Set(MODEL_OPTIONS.map((m) => m.provider))].map(
+                        {/* 供应商去重 + 自行部署 */}
+                        {[...new Set(MODEL_OPTIONS.map((m) => m.provider)), "custom"].map(
                           (provider) => (
                             <SelectItem key={provider} value={provider}>
-                              {provider.charAt(0).toUpperCase() +
-                                provider.slice(1)}
+                              {provider === "custom"
+                                ? "自行部署"
+                                : provider.charAt(0).toUpperCase() +
+                                  provider.slice(1)}
                             </SelectItem>
                           )
                         )}
@@ -241,28 +262,71 @@ export function ConfigDialog({
                     模型
                   </Label>
                   <div className="col-span-3">
-                    <Select
-                      value={localConfig.model.modelType}
-                      onValueChange={(value) =>
-                        setLocalConfig({
-                          ...localConfig,
-                          model: { ...localConfig.model, modelType: value },
-                        })
-                      }
-                    >
-                      <SelectTrigger id="model">
-                        <SelectValue placeholder="选择模型" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredModels.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {selectedProvider === "custom" ? (
+                      <Input
+                        id="model"
+                        value={localConfig.model.customModelName || ""}
+                        onChange={(e) =>
+                          setLocalConfig({
+                            ...localConfig,
+                            model: {
+                              ...localConfig.model,
+                              customModelName: e.target.value,
+                              modelType: e.target.value,
+                              provider: "custom",
+                            },
+                          })
+                        }
+                        placeholder="输入模型名称，如 qwen2.5、llama3"
+                      />
+                    ) : (
+                      <Select
+                        value={localConfig.model.modelType}
+                        onValueChange={(value) =>
+                          setLocalConfig({
+                            ...localConfig,
+                            model: { ...localConfig.model, modelType: value },
+                          })
+                        }
+                      >
+                        <SelectTrigger id="model">
+                          <SelectValue placeholder="选择模型" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {filteredModels.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                 </div>
+
+                {selectedProvider === "custom" && (
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="customUrl" className="text-right">
+                      模型 URL
+                    </Label>
+                    <div className="col-span-3">
+                      <Input
+                        id="customUrl"
+                        value={localConfig.model.customBaseUrl || ""}
+                        onChange={(e) =>
+                          setLocalConfig({
+                            ...localConfig,
+                            model: {
+                              ...localConfig.model,
+                              customBaseUrl: e.target.value,
+                            },
+                          })
+                        }
+                        placeholder="http://127.0.0.1:11434/v1"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="apiKey" className="text-right">
@@ -274,12 +338,13 @@ export function ConfigDialog({
                       type="password"
                       value={localConfig.apiKeys[getCurrentProviderKey() as keyof typeof localConfig.apiKeys] || ""}
                       onChange={(e) =>
-                        useAppStore
-                          .getState()
-                          .updateApiKeys(
-                            getCurrentProviderKey(),
-                            e.target.value
-                          )
+                        setLocalConfig({
+                          ...localConfig,
+                          apiKeys: {
+                            ...localConfig.apiKeys,
+                            [getCurrentProviderKey()]: e.target.value,
+                          },
+                        })
                       }
                       placeholder={`输入 ${getCurrentProviderKey()}  API 密钥`}
                     />
@@ -295,9 +360,10 @@ export function ConfigDialog({
                       id="systemPrompt"
                       value={localConfig.prompt || ""}
                       onChange={(e) =>
-                        useAppStore
-                          .getState()
-                          .updateSystemPrompt(e.target.value)
+                        setLocalConfig({
+                          ...localConfig,
+                          prompt: e.target.value,
+                        })
                       }
                       placeholder={`输入系统提示词，留空则使用默认提示词`}
                     />

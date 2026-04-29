@@ -6,6 +6,9 @@ export const ToolUIExecuteGeoGebraCommand = (part: any) => {
     case "input-available":
       return `执行命令: ${part.input.command}...`;
     case "output-available":
+      if (part.output.success === false) {
+        return `执行命令: ${part.input.command} 时出错: ${part.output.error}`;
+      }
       const label = part.output.label;
       if (label === "" || label === null || label === undefined) {
         return `执行命令: ${part.input.command}(成功)`;

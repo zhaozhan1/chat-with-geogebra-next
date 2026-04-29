@@ -22,6 +22,7 @@ interface FloatingChatPanelProps {
   onCreateConversation: () => void;
   onSelectConversation: (messageId: string) => void;
   onRefreshCanvas: () => void;
+  onExecuteCommands?: (commands: string[]) => Promise<void>;
   handleStop: () => void;
   error: string | null;
 }
@@ -36,6 +37,7 @@ export function FloatingChatPanel({
   onGotoHome,
   onOpenConfig,
   onRefreshCanvas,
+  onExecuteCommands,
   onCreateConversation,
   onSelectConversation,
   handleStop,
@@ -301,6 +303,7 @@ export function FloatingChatPanel({
               isLoading={isLoading}
               isThinking={isThinking}
               onOpenConfig={onOpenConfig}
+              onExecuteCommands={onExecuteCommands}
               error={error}
             />
           </div>

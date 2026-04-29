@@ -248,8 +248,13 @@ export default function ChatPage() {
                   .provider as keyof typeof configSettings.apiKeys
               ] || "",
             modelProvider: configSettings.model.provider,
-            modelType: configSettings.model.modelType,
+            modelType: configSettings.model.provider === "custom"
+              ? configSettings.model.customModelName || ""
+              : configSettings.model.modelType,
             modelPrompt: configSettings.prompt,
+            modelCustomBaseUrl: configSettings.model.provider === "custom"
+              ? configSettings.model.customBaseUrl || ""
+              : undefined,
           },
         },
         headers: {
@@ -293,6 +298,46 @@ export default function ChatPage() {
     rebuild();
   }, [rebuild]);
 
+  const handleExecuteCommands = useCallback(
+    async (commands: string[]) => {
+      try {
+        const userMessage = {
+          id: `${getRandomId()}`,
+          role: "user" as "user",
+          parts: [{ type: "text" as const, text: `[批量命令] ${commands.length} 条命令` }],
+        }
+        useAppStore.getState().addMessage(activeConversationId, userMessage);
+        setChatMessages(useAppStore.getState().conversation.conversations[activeConversationId]?.messages || []);
+
+        for (const cmd of commands) {
+          const result = await executeCommand(cmd);
+          const toolMessage = {
+            id: `${getRandomId()}`,
+            role: "assistant" as "assistant",
+            parts: [
+              {
+                type: "tool-executeGeoGebraCommand" as const,
+                state: "output-available" as const,
+                input: { command: cmd },
+                output: result.success
+                  ? { success: true, label: result.label, error: "" }
+                  : { success: false, label: result.label, error: result.error },
+                toolCallId: `${getRandomId()}`,
+              },
+            ],
+          }
+          useAppStore.getState().addMessage(activeConversationId, toolMessage);
+          setChatMessages(useAppStore.getState().conversation.conversations[activeConversationId]?.messages || []);
+
+          if (!result.success) break;
+        }
+      } catch (err) {
+        handleError(err)
+      }
+    },
+    [activeConversationId, executeCommand, setChatMessages, handleError]
+  )
+
   const handleGoToHome = useCallback(() => {
     window.location.href = "/";
   }, []);
@@ -326,6 +371,7 @@ export default function ChatPage() {
           onCreateConversation={handleCreateConversation}
           onSelectConversation={handleSelectConversation}
           onRefreshCanvas={handleRefreshCanvas}
+          onExecuteCommands={handleExecuteCommands}
           error={error}
         />
 

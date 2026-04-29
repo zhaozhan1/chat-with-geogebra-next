@@ -17,6 +17,7 @@ export type ApiKeys = {
   deepseek?: string;
   openai?: string;
   gemini?: string;
+  custom?: string;
 };
 
 export type PanelConfig = {
@@ -34,6 +35,8 @@ export type PanelConfig = {
 export type ModelSettings = {
     provider: string;
     modelType: string;
+    customModelName?: string;
+    customBaseUrl?: string;
 }
 
 export type AppConfigSettings = {
