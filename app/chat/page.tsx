@@ -15,6 +15,7 @@ import { FloatingChatPanel } from "@/client/components/floating-chat-panel"
 import dynamic from "next/dynamic"
 import { uploadOneMessageToCollection } from "@/client/lib/collection";
 import { getRandomId } from "@/client/lib/utils"
+import { isModelSupportsImage } from "@/server/core/config/providers";
 
 const ConfigDialog = dynamic(() => import("@/client/components/config-dialog").then(mod => mod.ConfigDialog), {
   ssr: false
@@ -50,6 +51,13 @@ export default function ChatPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
+  const [attachment, setAttachment] = useState<{
+    file: File;
+    preview: string;
+  } | null>(null);
+
+  const supportsImage = config.model.provider === "custom"
+    || isModelSupportsImage(config.model.modelType);
 
   // 初始化store
   useEffect(() => {
@@ -84,7 +92,7 @@ export default function ChatPage() {
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
 
     transport: new DefaultChatTransport({
-      api: "/api/agent"
+      api: "/api/agent/"
     }),
     async onToolCall({ toolCall }) {
       let result;
@@ -156,7 +164,7 @@ export default function ChatPage() {
     onFinish: (message: any) => {
       setIsThinking(false);
       if (message.finishReason === "stop") {
-        // 上传最后一条消息到集合
+        setAttachment(null);
         uploadOneMessageToCollection(activeConversationId, message.message);
         useAppStore .getState() .addMessage(activeConversationId, message.message);
       }
@@ -219,7 +227,7 @@ export default function ChatPage() {
 
   const handleChatSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!input.trim() || isLoading) return
+    if ((!input.trim() && !attachment) || isLoading) return
 
     const configSettings = chatConfig.configSettings
 
@@ -229,7 +237,12 @@ export default function ChatPage() {
     const userMessage = {
       id: `${getRandomId()}`,  // 16位随机字母ID
       role: "user" as "user",
-      parts: [{ type: "text" as const, text: input }],
+      parts: [
+        ...(input.trim() ? [{ type: "text" as const, text: input }] : []),
+        ...(attachment
+          ? [{ type: "file" as const, mediaType: attachment.file.type, url: attachment.preview, filename: attachment.file.name }]
+          : []),
+      ],
     }
     useAppStore.getState().addMessage(activeConversationId, userMessage);
 
@@ -272,8 +285,6 @@ export default function ChatPage() {
       };
     }
 
-    console.log("Sending message with options:", requestOptions);
-
     try {
       sendMessage(
         userMessage,
@@ -284,7 +295,7 @@ export default function ChatPage() {
     } catch (err) {
       handleError(err)
     }
-  }, [input, isLoading, clearError, sendMessage, chatConfig, handleError])
+  }, [input, isLoading, attachment, clearError, sendMessage, chatConfig, handleError])
 
   const handleCreateConversation = useCallback(() => {
     if (!isLoading) useAppStore.getState().createConversation()
@@ -373,6 +384,9 @@ export default function ChatPage() {
           onRefreshCanvas={handleRefreshCanvas}
           onExecuteCommands={handleExecuteCommands}
           error={error}
+          attachment={attachment}
+          onAttachmentChange={setAttachment}
+          supportsImage={supportsImage}
         />
 
         {saveSuccess && (

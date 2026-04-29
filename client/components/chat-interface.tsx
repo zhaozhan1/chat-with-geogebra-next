@@ -5,11 +5,13 @@ import { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardFooter } from "@/client/components/ui/card"
 import { Input } from "@/client/components/ui/input"
 import { Button } from "@/client/components/ui/button"
-import { Send, AlertCircle, StopCircleIcon, Terminal } from "lucide-react"
+import { Send, AlertCircle, StopCircleIcon, Terminal, Paperclip, X } from "lucide-react"
 import { Alert, AlertDescription } from "@/client/components/ui/alert"
 import { useGeoGebraCommands } from "@/client/hooks/use-geogebra-commands"
 import { ChatMessageItem } from "@/client/components/chat-message-item"
 import { CommandDialog } from "@/client/components/command-dialog"
+import { validateFile, fileToDataUrl } from "@/client/lib/file-validation"
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/client/components/ui/tooltip"
 
 interface ChatInterfaceProps {
   messages: any
@@ -21,6 +23,9 @@ interface ChatInterfaceProps {
   isLoading: boolean
   onOpenConfig?: () => void
   onExecuteCommands?: (commands: string[]) => Promise<void>
+  attachment: { file: File; preview: string } | null;
+  onAttachmentChange: (attachment: { file: File; preview: string } | null) => void;
+  supportsImage: boolean;
   error?: string | null
 }
 
@@ -33,12 +38,18 @@ export function ChatInterface({
   isThinking,
   isLoading,
   onExecuteCommands,
+  attachment,
+  onAttachmentChange,
+  supportsImage,
   error,
 }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({});
   const [commandDialogOpen, setCommandDialogOpen] = useState(false);
   const { extractAllMessagesCommands } = useGeoGebraCommands();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // 自动滚动到底部
   const scrollToBottom = useCallback(() => {
@@ -63,7 +74,69 @@ export function ChatInterface({
     }))
   }, [])
 
+  const handleFileSelect = useCallback(async (file: File) => {
+    if (!supportsImage) {
+      setToastMessage("当前模型不支持图片输入，请切换模型");
+      return;
+    }
+    const error = validateFile(file);
+    if (error) {
+      setToastMessage(error.message);
+      return;
+    }
+    try {
+      const preview = await fileToDataUrl(file);
+      onAttachmentChange({ file, preview });
+    } catch {
+      setToastMessage("文件读取失败");
+    }
+  }, [supportsImage, onAttachmentChange]);
+
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFileSelect(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, [handleFileSelect]);
+
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) handleFileSelect(file);
+        return;
+      }
+    }
+  }, [handleFileSelect]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    if (supportsImage) setIsDragOver(true);
+  }, [supportsImage]);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (e.clientX <= rect.left || e.clientX >= rect.right || e.clientY <= rect.top || e.clientY >= rect.bottom) {
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) handleFileSelect(file);
+  }, [handleFileSelect]);
+
+  const removeAttachment = useCallback(() => {
+    onAttachmentChange(null);
+  }, [onAttachmentChange]);
+
   return (
+    <TooltipProvider>
     <Card className="flex-1 flex flex-col h-full overflow-hidden border-0 rounded-none grow">
       <CardContent className="flex-1 p-0 relative overflow-hidden grow">
         <div className="chat-messages-container absolute top-0 left-0 right-0 bottom-16 p-4 overflow-y-auto h-full">
@@ -126,39 +199,59 @@ export function ChatInterface({
       </CardContent>
 
       <CardFooter className="border-t p-4 shrink-0 sticky bottom-0 bg-background z-10">
-        <form onSubmit={handleSubmit} className="flex w-full gap-2">
-          <Input
-            placeholder="输入您的消息..."
-            value={input}
-            onChange={handleInputChange}
-            className="flex-1"
-            disabled={isLoading}
-          />
-          {isLoading ? (
-            <Button onClick={handleStop}>
-              <StopCircleIcon className="h-4 w-4" />
-            </Button>
-          ) : (
-            <>
-              <Button type="submit" disabled={!input.trim()}>
-                <Send className="h-4 w-4" />
-              </Button>
-              {onExecuteCommands && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCommandDialogOpen(true)}
-                  disabled={isLoading}
-                  title="批量命令"
-                >
-                  <Terminal className="h-4 w-4" />
-                </Button>
-              )}
-            </>
+        <div
+          className={`flex w-full flex-col gap-2 rounded-lg border-2 transition-colors p-2 ${isDragOver ? "border-primary bg-primary/5" : "border-transparent"}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {toastMessage && (
+            <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{toastMessage}</span>
+              <button type="button" className="ml-auto shrink-0" onClick={() => setToastMessage(null)}>
+                <X className="h-3 w-3" />
+              </button>
+            </div>
           )}
-        </form>
-
+          {attachment && (
+            <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2">
+              {attachment.file.type.startsWith("image/") ? (
+                <img src={attachment.preview} alt="预览" className="h-10 w-10 rounded object-cover" />
+              ) : (
+                <div className="flex h-10 w-10 items-center justify-center rounded bg-muted-foreground/10 text-xs text-muted-foreground">PDF</div>
+              )}
+              <span className="text-sm text-muted-foreground truncate max-w-[200px]">{attachment.file.name}</span>
+              <button type="button" className="ml-auto shrink-0 text-muted-foreground hover:text-foreground" onClick={removeAttachment}>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="flex w-full gap-2">
+            <input ref={fileInputRef} type="file" accept="image/*,.pdf" className="hidden" onChange={handleFileInputChange} />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button type="button" variant="ghost" size="icon" className="shrink-0" disabled={isLoading || !supportsImage} onClick={() => fileInputRef.current?.click()}>
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{supportsImage ? "上传图片或 PDF" : "当前模型不支持图片输入"}</TooltipContent>
+            </Tooltip>
+            <Input placeholder="输入您的消息..." value={input} onChange={handleInputChange} className="flex-1" disabled={isLoading} onPaste={handlePaste} />
+            {isLoading ? (
+              <Button onClick={handleStop}><StopCircleIcon className="h-4 w-4" /></Button>
+            ) : (
+              <>
+                <Button type="submit" disabled={!input.trim() && !attachment}><Send className="h-4 w-4" /></Button>
+                {onExecuteCommands && (
+                  <Button type="button" variant="outline" size="icon" onClick={() => setCommandDialogOpen(true)} disabled={isLoading} title="批量命令">
+                    <Terminal className="h-4 w-4" />
+                  </Button>
+                )}
+              </>
+            )}
+          </form>
+        </div>
         {onExecuteCommands && (
           <CommandDialog
             open={commandDialogOpen}
@@ -168,6 +261,7 @@ export function ChatInterface({
         )}
       </CardFooter>
     </Card>
+    </TooltipProvider>
   );
 }
 

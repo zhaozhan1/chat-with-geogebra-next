@@ -25,6 +25,9 @@ interface FloatingChatPanelProps {
   onExecuteCommands?: (commands: string[]) => Promise<void>;
   handleStop: () => void;
   error: string | null;
+  attachment: { file: File; preview: string } | null;
+  onAttachmentChange: (attachment: { file: File; preview: string } | null) => void;
+  supportsImage: boolean;
 }
 
 export function FloatingChatPanel({
@@ -42,6 +45,9 @@ export function FloatingChatPanel({
   onSelectConversation,
   handleStop,
   error,
+  attachment,
+  onAttachmentChange,
+  supportsImage,
 }: FloatingChatPanelProps) {
   // Refs for resize only
 
@@ -305,6 +311,9 @@ export function FloatingChatPanel({
               onOpenConfig={onOpenConfig}
               onExecuteCommands={onExecuteCommands}
               error={error}
+              attachment={attachment}
+              onAttachmentChange={onAttachmentChange}
+              supportsImage={supportsImage}
             />
           </div>
 
