@@ -320,7 +320,7 @@ export default function ChatPage() {
                 state: "output-available" as const,
                 input: { command: cmd },
                 output: result.success
-                  ? { success: true, label: result.label, error: null }
+                  ? { success: true, label: result.label, error: "" }
                   : { success: false, label: result.label, error: result.error },
                 toolCallId: `${getRandomId()}`,
               },
@@ -329,7 +329,7 @@ export default function ChatPage() {
           useAppStore.getState().addMessage(activeConversationId, toolMessage);
           setChatMessages(useAppStore.getState().conversation.conversations[activeConversationId]?.messages || []);
 
-          if (!result.success) break
+          if (!result.success) break;
         }
       } catch (err) {
         handleError(err)
