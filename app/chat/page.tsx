@@ -92,7 +92,7 @@ export default function ChatPage() {
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
 
     transport: new DefaultChatTransport({
-      api: "/api/agent"
+      api: "/api/agent/"
     }),
     async onToolCall({ toolCall }) {
       let result;
