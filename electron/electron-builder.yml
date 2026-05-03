@@ -18,5 +18,6 @@ extraResources:
     to: standalone/public/GeoGebra
     filter:
       - "**/*"
+npmRebuild: false
 win:
   target: portable
