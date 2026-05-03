@@ -2,13 +2,16 @@
   "name": "chat-with-geogebra",
   "version": "0.4.0",
   "private": true,
+  "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "bun run --bun next dev --turbopack",
     "build": "bun run --bun next build",
     "start": "bun run --bun next start",
     "lint": "bun run --bun next lint",
-    "search:test": "tsx scripts/test-search-commands.ts"
+    "search:test": "tsx scripts/test-search-commands.ts",
+    "electron:dev": "electron .",
+    "electron:build": "next build && electron-builder --config electron/electron-builder.yml --win"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.56",
@@ -97,6 +100,8 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "dotenv": "^17.2.3",
+    "electron": "^41.5.0",
+    "electron-builder": "^26.8.1",
     "tailwindcss": "^4.1.18",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
