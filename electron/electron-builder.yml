@@ -16,8 +16,16 @@ extraResources:
     to: standalone/node_modules
   - from: .next/static
     to: standalone/.next/static
+  - from: public/css
+    to: standalone/public/css
   - from: public/GeoGebra
     to: standalone/public/GeoGebra
+  - from: public/images
+    to: standalone/public/images
+  - from: public/js
+    to: standalone/public/js
+  - from: public/preview.png
+    to: standalone/public/preview.png
 npmRebuild: false
 win:
   target:
