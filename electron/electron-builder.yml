@@ -20,4 +20,7 @@ extraResources:
       - "**/*"
 npmRebuild: false
 win:
-  target: portable
+  target:
+    - target: portable
+      arch:
+        - x64

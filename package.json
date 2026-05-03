@@ -11,7 +11,7 @@
     "lint": "bun run --bun next lint",
     "search:test": "tsx scripts/test-search-commands.ts",
     "electron:dev": "electron .",
-    "electron:build": "next build && electron-builder --config electron/electron-builder.yml --win portable"
+    "electron:build": "next build && electron-builder --config electron/electron-builder.yml"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.56",
