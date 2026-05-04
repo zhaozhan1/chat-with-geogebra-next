@@ -1,19 +1,6 @@
-# 🎨 Chat with GeoGebra (Next Part)
+# 🎨 Chat with GeoGebra
 
-> ⚠️ **安全提醒**: 在部署到生产环境前，请务必阅读 [安全检查清单](docs/SECURITY_CHECKLIST.md)
-
-~~(⚠️本项目因作者找到了一周加班五天的工作而丧失了维护能力，虽然作者已经畅想出了详细的后续更新计划和宏伟的商业版图。如果您觉得您有能力让这个项目更好，请联系作者)~~
-
-目前比较闲，会日常更新一下
-
-⚠️ 此项目是 chat-with-geogebra 的 next 部分
-
-## TODO List
-
-- [ ] 基于geogebra command lint的语法检测
-- [ ] 自我修正的mcp
-- [ ] 上传应用题照片自动绘图
-- [ ] 客户端
+> **Fork 自**: [tiwe0/chat-with-geogebra-next](https://github.com/tiwe0/chat-with-geogebra-next)
 
 使用自然语言交流，辅助绘制 GeoGebra 图像的轻量工具。
 
@@ -38,12 +25,21 @@
 
 (省流版：被拒绝了)
 
+## TODO List
+
+- [ ] 基于 geogebra command lint 的语法检测
+- [ ] 自我修正的 mcp
+- [x] ~~上传应用题照片自动绘图~~（已实现图片/PDF 上传）
+- [x] ~~客户端~~（已实现 Windows Electron 桌面版）
+
 ## ✨ 功能特色
 
-- 🧠 自然语言生成 GeoGebra 命令
-- 🖼️ 自动绘制图像，实时反馈
-- 🔗 支持接入多个大模型（Claude、ChatGPT、DeepSeek）
-- 🌐 无需安装，直接在线访问
+- 🧠 自然语言生成 GeoGebra 命令，实时绘图反馈
+- 🖼️ 支持图片/PDF 上传（拖拽、粘贴、点击上传）
+- 📋 批量执行 GeoGebra 命令（支持全角自动转换）
+- 🖥️ Windows 桌面客户端（Electron 便携版）
+- 🔗 支持多个大模型（Claude、ChatGPT、DeepSeek、Gemini、自行部署）
+- 🌐 在线访问，无需安装
 - 🏠 支持本地部署
 - 🔑 支持自定义 API Key
 
@@ -55,32 +51,44 @@
 
 ![预览图](./public/preview.png)  
 
-## 🚀 快速开始（本地部署）
+## 🚀 快速开始
 
 ### 前置要求
-- Node.js 18+ 
-- pnpm
+
+- [Bun](https://bun.sh/)
 
 ### 安装与运行
 
 ```bash
-
 # 安装依赖
-pnpm install
+bun install
 
 # 运行开发环境
-pnpm dev
+bun run dev
 ```
 
-访问 `http://localhost:3000` 开始使用。
+访问 `http://localhost:3000/chat` 开始使用。
 
 ⚡ **注意**：
-- 基本聊天功能需要自行准备 DeepSeek、Openai、Gemini 等服务的 API Key
+- 基本聊天功能需要自行准备 Claude、OpenAI、DeepSeek 或 Gemini 等服务的 API Key
+
+### Windows 桌面版
+
+```bash
+bun run electron:build
+```
+
+产物位于 `release/` 目录。
 
 ## 🧩 技术栈
-- Next.js
-- GeoGebra Command API
-- 大语言模型接入（Claude / ChatGPT / DeepSeek）
+
+- **框架**: Next.js 16 (App Router + Turbopack)
+- **AI**: Vercel AI SDK v5（支持 OpenAI / Anthropic / DeepSeek / Google）
+- **绘图**: GeoGebra HTML5 小程序
+- **UI**: shadcn/ui + Tailwind CSS v4
+- **状态管理**: Zustand
+- **桌面**: Electron
+- **运行时**: Bun
 
 ## 📜 开源协议
 
